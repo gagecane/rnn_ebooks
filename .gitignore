@@ -1,3 +1,7 @@
+consumer_keys.txt
+consumer_keys.json
+.vscode
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
