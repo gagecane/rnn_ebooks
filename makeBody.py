@@ -1,5 +1,8 @@
 import tweepy
 import json
+# from datetime import datetime
+import emoji
+import os
 
 
 keyFile = "consumer_keys.json"
@@ -88,27 +91,110 @@ def connectToTwitter():
     return api
 
 
-def printTweets(api, user, count):
-    """Print a number of tweets from a specified username
+def printTweetsToFile(api, user, count, filename, existingBody, max_id=None):
+    """ Print a number of tweets from a specified username to a file
 
     Arguments:
         api {tweepy.API(auth)} -- authenticated tweepy API
         user {string} -- Twitter username with @
         count {number} -- Number of tweets to print
+        filename {string} -- Output file name
+        existingBody {dict} -- Existing contents of JSON body for this username
+
+    Keyword Arguments:
+        max_id {number} --  Max ID of tweets to retreive.
+                            Will retreive older (lower ID) tweets
+                            (default: {None})
     """
-    tweets = api.user_timeline(screen_name=user, count=count,
-                               max_id=936533580481814529)
+    tweets = api.user_timeline(
+        # Extended should get tweets longer than 140 but may only
+        # work with api.get_status
+        screen_name=user, count=count, max_id=max_id, include_rts=False)
+
+    OutFileBody = open(filename, "w")
+    if(existingBody is not None):
+        tweetsToWrite = existingBody
+    else:
+        tweetsToWrite = {}
+    print("Existing body")
+    print(existingBody)
+    print("Tweets to write")
+    print(tweetsToWrite)
     for tweet in tweets:
-        print(tweet.text)
         tid = tweet.id
-        print(tid)
+        full_text = tweet.full_text
+
+        tweepy.Status.parse_list()
+        # If the tweet is probably truncated, use get_status instead
+        if tweet.full_text.endswith("…"):
+            full_text = api.get_status(tid, tweet_mode='extended')._json.full_text
+
+        tweetsToWrite[tid] = emoji.demojize(full_text)
+
+        # If the tweet ID is lower it is older
+    json.dump(tweetsToWrite, OutFileBody)
+    OutFileBody.close()
+
+
+def printJsonBody(filename):
+    """Generate test.htm from the corpus and open it in a browser
+
+    Arguments:
+        filename {string} -- The input json file to print
+    """
+    with open(filename, 'r') as infile:
+        data = json.load(infile)
+        with open('test.htm', 'w', encoding='utf-8-sig') as f:
+            for d in data.values():
+                f.write((emoji.emojize(d)+"\n").replace("\r\n", "\n")
+                        .replace("\n", "<br />\n"))
+        os.startfile('test.htm')
+
+
+def getJsonBody(filename):
+    """Try loading body from Json file. Return the dict if the file exists
+
+    Arguments:
+        filename {string} -- Json body filename
+
+    Returns:
+        Dict -- Json data or None if file does not exist
+    """
+    try:
+        with open(outFilename, 'r') as infile:
+            return json.load(infile)
+    except Exception:
+        print(outFilename + "does not already exist. Creating new file.")
+        return None
 
 
 if __name__ == "__main__":
     loadKeys()
     api = connectToTwitter()
-    printTweets(api, "@StoobsDeer", 2)
-    # twitter_users = ["@StoobsDeer"]
+    username = "@StoobsDeer"
+    # outFilename = username+"_body%s.json" % datetime.now()
+    #                                       .strftime("%Y%m%d-%H%M%S")
+    outFilename = username.replace("@", '')+"_body.json"
+    data = getJsonBody(outFilename)
 
+    x = 0
+    max_id = None
+    while(x < 2):
+        try:
+            data = getJsonBody(outFilename)
+            if(data is not None):
+                print(data.keys())
+                print(min(data.keys()))
+                max_id = min([int(d) for d in data.keys()])
+            else:
+                max_id = None
+            print(x, max_id)
+            printTweetsToFile(
+                api, username, 2, outFilename, data, max_id=max_id)
+            x += 1
+        except Exception as ex:
+            print(ex)
+            exit()
+    printJsonBody(outFilename)
     # for twitter_user in twitter_users:
     #     downloadTweets(twitter_user)
