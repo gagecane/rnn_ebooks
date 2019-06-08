@@ -3,7 +3,7 @@ import json
 # from datetime import datetime
 import emoji
 import os
-
+from pathlib import Path
 
 keyFile = "consumer_keys.json"
 
@@ -116,22 +116,16 @@ def printTweetsToFile(api, user, count, filename, existingBody, max_id=None):
         tweetsToWrite = existingBody
     else:
         tweetsToWrite = {}
-    print("Existing body")
-    print(existingBody)
-    print("Tweets to write")
-    print(tweetsToWrite)
     for tweet in tweets:
         tid = tweet.id
-        full_text = tweet.full_text
+        full_text = tweet.text
 
-        tweepy.Status.parse_list()
         # If the tweet is probably truncated, use get_status instead
-        if tweet.full_text.endswith("…"):
-            full_text = api.get_status(tid, tweet_mode='extended')._json.full_text
+        if "…" in full_text:
+            full_text = api.get_status(tid, tweet_mode='extended').full_text
 
         tweetsToWrite[tid] = emoji.demojize(full_text)
 
-        # If the tweet ID is lower it is older
     json.dump(tweetsToWrite, OutFileBody)
     OutFileBody.close()
 
@@ -161,40 +155,52 @@ def getJsonBody(filename):
         Dict -- Json data or None if file does not exist
     """
     try:
-        with open(outFilename, 'r') as infile:
+        with open(filename, 'r') as infile:
             return json.load(infile)
     except Exception:
-        print(outFilename + "does not already exist. Creating new file.")
+        print(filename + "does not already exist. Creating new file.")
+        Path(filename).touch()
         return None
+
+
+def buildBody(username):
+    """Build a body JSON for an input username
+
+    Arguments:
+        username {string} -- Twitter handle starting with @
+    """
+    if (not os.path.isdir("./bodies/")):
+        os.mkdir("bodies")
+    outFilename = "./bodies/"+username.replace("@", '')+"_body.json"
+    MaxId = None
+    LastMaxId = -1
+    while(LastMaxId != MaxId):
+        if(MaxId):
+            LastMaxId = MaxId
+        try:
+            data = getJsonBody(outFilename)
+            if(data is not None):
+                # Subtract one to not include the same oldest tweet
+                MaxId = min([int(d) for d in data.keys()])-1
+                print("Max ID: %d" % MaxId)
+            else:
+                MaxId = None
+                print("No Max ID yet")
+            printTweetsToFile(
+                api, username, 200, outFilename, data, max_id=MaxId)
+        except Exception as ex:
+            print(ex)
+            break
+    printJsonBody(outFilename)
 
 
 if __name__ == "__main__":
     loadKeys()
     api = connectToTwitter()
     username = "@StoobsDeer"
+    buildBody(username)
     # outFilename = username+"_body%s.json" % datetime.now()
     #                                       .strftime("%Y%m%d-%H%M%S")
-    outFilename = username.replace("@", '')+"_body.json"
-    data = getJsonBody(outFilename)
 
-    x = 0
-    max_id = None
-    while(x < 2):
-        try:
-            data = getJsonBody(outFilename)
-            if(data is not None):
-                print(data.keys())
-                print(min(data.keys()))
-                max_id = min([int(d) for d in data.keys()])
-            else:
-                max_id = None
-            print(x, max_id)
-            printTweetsToFile(
-                api, username, 2, outFilename, data, max_id=max_id)
-            x += 1
-        except Exception as ex:
-            print(ex)
-            exit()
-    printJsonBody(outFilename)
     # for twitter_user in twitter_users:
     #     downloadTweets(twitter_user)

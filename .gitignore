@@ -1,5 +1,7 @@
 consumer_keys.txt
 consumer_keys.json
+bodies
+test.htm
 .vscode
 
 # Byte-compiled / optimized / DLL files
