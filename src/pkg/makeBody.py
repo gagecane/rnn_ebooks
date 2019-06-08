@@ -194,6 +194,12 @@ def buildBody(username):
     printJsonBody(outFilename)
 
 
+def getHello():
+    """For testing import
+    """
+    return("Hello")
+
+
 if __name__ == "__main__":
     loadKeys()
     api = connectToTwitter()
