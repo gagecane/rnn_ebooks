@@ -5,90 +5,86 @@ import emoji
 import os
 from pathlib import Path
 
-keyFile = "consumer_keys.json"
 
-
-def downloadTweets(user):
-    """Download as many tweets as possible from a Twitter user
-
-    Arguments:
-        user {string} -- [twitter handle with @]
+class KeyHolder:
+    """Handles consumer and oauth keys loading, saving and doing oauth to generate
+       an api object
     """
-    # Configure authentication
-    authorisation = tweepy.OAuthHandler(
-        keys["consumer_key"], keys["consumer_secret"])
-    authorisation.set_access_token(keys["access_token"], keys["access_secret"])
-    api = tweepy.API(authorisation)
-    # Requests most recent tweets from a users timeline
-    tweets = api.user_timeline(screen_name=user, count=2,
-                               max_id=936533580481814529)
-    for tweet in tweets:
-        tid = tweet.id
-        print(tid)
 
-
-def loadKeys():
-    """Load a consumer key from a file
-    """
-    global keys
+    keyFile = ""
     keys = {}
-    with open(keyFile, 'r') as infile:
-        keys = json.load(infile)
+    consumer_keys = ["consumer_key", "consumer_secret"]
+    access_tokens = ["access_token", "access_token_secret"]
 
+    def __init__(self, keyFile):
+        keyFile = keyFile
 
-def saveKeyToFile():
-    """Save the keys dictionary to a file of key=value
-    """
-    try:
-        x = keys["consumer_key"]
-        x = keys["consumer_secret"]
-    except KeyError:
-        print("Error! Not writing %s before loadKeys()" % keyFile)
-    with open("consumer_keys.json", "w") as outfile:
-        outfile.write(json.dumps(keys, indent=4, sort_keys=True))
+    def loadedConsumerKeys(self):
+        """ Check if the consumer keys were loaded into self.keys
+        """
+        if(any(d not in self.keys for d in self.required_keys)):
+            print("Run loadKeys(keyFile) first and \
+                make sure your json keyfile is populated with %s "
+                  % ", ".join(self.required_keys))
+            return False
+        return True
 
-
-def connectToTwitter():
-    """ Connect to twitter
-    """
-    try:
-        x = keys["consumer_key"]
-    except KeyError:
-        print("Need to populate consumer_key! Run loadKeys() first")
-
-    auth = tweepy.OAuthHandler(keys["consumer_key"], keys["consumer_secret"])
-
-    if "access_token" in keys:
-        auth.set_access_token(keys["access_token"],
-                              keys["access_token_secret"])
-
-    else:
+    def loadKeys(self, keyFile):
+        """Load a consumer key from a json file
+        """
         try:
-            redirect_url = auth.get_authorization_url()
-        except tweepy.TweepError:
-            print('Error! Failed to get request token.')
-        print(redirect_url)
+            with open(keyFile, 'r') as infile:
+                self.keys = json.load(infile)
+        except FileNotFoundError:
+            print("Error: File %s does not exist" % keyFile)
 
-        verifier = input('\n Visit the above URL and input the pin: ')
+    def saveKeyToFile(self, keyFile):
+        """Save the keys dictionary to a json file
+        """
+        if (not self.loadedConsumerKeys()):
+            print("Not writing %s before loading %s" %
+                  (keyFile, ", ".join(self.required_keys)))
+            return
+        else:
+            with open("consumer_keys.json", "w") as outfile:
+                outfile.write(json.dumps(self.keys, indent=4, sort_keys=True))
 
-        try:
-            auth.get_access_token(verifier)
-        except tweepy.TweepError:
-            print('Error! Failed to get access token.')
+    def connectToTwitter(self):
+        """ Connect to twitter
+            Requres loadKeys() was ran to load consumer_key
+        """
+        if (not self.loadedConsumerKeys()):
+            print("Not attempting to connect to twitter without loading required keys!")
+            return
 
-        keys["access_token"] = auth.access_token
-        keys["access_token_secret"] = auth.access_token_secret
-        saveKeyToFile()
-    '''
-    To store the access token depends on your application.
-    Basically you need to store 2 string values: key and secret:
+        # Load oauth and get access_token and access_token_secret
+        auth = tweepy.OAuthHandler(
+            self.keys["consumer_key"], self.keys["consumer_secret"])
 
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(key, secret)
-    '''
+        if "access_token" in self.keys and "access_token_secret" in self.keys:
+            auth.set_access_token(self.keys["access_token"],
+                                  self.keys["access_token_secret"])
 
-    api = tweepy.API(auth)
-    return api
+        else:
+            try:
+                redirect_url = auth.get_authorization_url()
+            except tweepy.TweepError:
+                print('Error! Failed to get request token.')
+            print(redirect_url)
+
+            verifier = input('\n Visit the above URL and input the pin: ')
+
+            try:
+                auth.get_access_token(verifier)
+            except tweepy.TweepError:
+                print('Error! Failed to get access token.')
+
+            self.keys["access_token"] = auth.access_token
+            self.keys["access_token_secret"] = auth.access_token_secret
+            self.saveKeyToFile()
+
+        api = tweepy.API(auth)
+        return api
 
 
 def printTweetsToFile(api, user, count, filename, existingBody, max_id=None):
@@ -201,8 +197,9 @@ def getHello():
 
 
 if __name__ == "__main__":
-    loadKeys()
-    api = connectToTwitter()
+    keyholder = KeyHolder("consumer_keys.json")
+    keyholder.loadKeys()
+    api = keyholder.connectToTwitter()
     username = "@StoobsDeer"
     buildBody(username)
     # outFilename = username+"_body%s.json" % datetime.now()
