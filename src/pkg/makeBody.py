@@ -11,39 +11,45 @@ class KeyHolder:
        an api object
     """
 
-    keyFile = ""
-    keys = {}
-    consumer_keys = ["consumer_key", "consumer_secret"]
-    access_tokens = ["access_token", "access_token_secret"]
-
-    def __init__(self, keyFile):
-        keyFile = keyFile
+    def __init__(self, keyFile=None):
+        self.keyFile = keyFile
+        self.keys = {}
+        self.consumer_keys = ["consumer_key", "consumer_secret"]
+        self.access_tokens = ["access_token", "access_token_secret"]
+        self.errKeysNotLoaded = "Run loadKeys(keyFile) first and \
+                            make sure your json keyfile is populated with " \
+                            + ", ".join(self.consumer_keys)
 
     def loadedConsumerKeys(self):
         """ Check if the consumer keys were loaded into self.keys
         """
-        if(any(d not in self.keys for d in self.required_keys)):
-            print("Run loadKeys(keyFile) first and \
-                make sure your json keyfile is populated with %s "
-                  % ", ".join(self.required_keys))
+        if(any(d not in self.keys for d in self.consumer_keys)):
+            print(self.errKeysNotLoaded)
             return False
         return True
 
-    def loadKeys(self, keyFile):
-        """Load a consumer key from a json file
+    def loadKeys(self, keyFile=None):
+        """Load consumer keys from a json file
+
+        Keyword Arguments:
+            keyFile {string} -- Optional keyFile name. Will use self.keyFile
+                                if not populatd (default: {None})
         """
+        keyFileToLoad = keyFile
+        if (keyFile is None):
+            keyFileToLoad = self.keyFile
         try:
-            with open(keyFile, 'r') as infile:
+            with open(keyFileToLoad, 'r') as infile:
                 self.keys = json.load(infile)
         except FileNotFoundError:
-            print("Error: File %s does not exist" % keyFile)
+            print("Error: File %s does not exist" % keyFileToLoad)
 
     def saveKeyToFile(self, keyFile):
         """Save the keys dictionary to a json file
         """
         if (not self.loadedConsumerKeys()):
             print("Not writing %s before loading %s" %
-                  (keyFile, ", ".join(self.required_keys)))
+                  (keyFile, ", ".join(self.consumer_keys)))
             return
         else:
             with open("consumer_keys.json", "w") as outfile:
@@ -54,7 +60,8 @@ class KeyHolder:
             Requres loadKeys() was ran to load consumer_key
         """
         if (not self.loadedConsumerKeys()):
-            print("Not attempting to connect to twitter without loading required keys!")
+            print("Not attempting to connect to twitter without loading \
+                   required keys!")
             return
 
         # Load oauth and get access_token and access_token_secret
@@ -188,12 +195,6 @@ def buildBody(username):
             print(ex)
             break
     printJsonBody(outFilename)
-
-
-def getHello():
-    """For testing import
-    """
-    return("Hello")
 
 
 if __name__ == "__main__":

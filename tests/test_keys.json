@@ -1,0 +1,6 @@
+{
+    "access_token":"testaccesstoken",
+    "access_token_secret":"testaccesstokensecret",
+    "consumer_key":"testconsumerkey",
+    "consumer_secret":"testconsumersecret"
+}
