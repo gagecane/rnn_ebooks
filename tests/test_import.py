@@ -1,6 +1,5 @@
 import src.pkg.makeBody as makeBody
-import sys
-import logging
+
 
 def testLoadKeysInit(capsys):
     """ init KeyHolder.keyFile and use loadKeys() with no arguments
