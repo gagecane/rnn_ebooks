@@ -3,6 +3,7 @@ consumer_keys.json
 bodies
 test.htm
 .vscode
+coverage_html_report
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

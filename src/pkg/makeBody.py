@@ -41,18 +41,20 @@ class KeyHolder:
         try:
             with open(keyFileToLoad, 'r') as infile:
                 self.keys = json.load(infile)
+        except TypeError:
+            print("Error: expected a string for filename")
         except FileNotFoundError:
             print("Error: File %s does not exist" % keyFileToLoad)
 
-    def saveKeyToFile(self, keyFile):
+    def saveKeysToFile(self, outKeyFile):
         """Save the keys dictionary to a json file
         """
         if (not self.loadedConsumerKeys()):
             print("Not writing %s before loading %s" %
-                  (keyFile, ", ".join(self.consumer_keys)))
+                  (outKeyFile, ", ".join(self.consumer_keys)))
             return
         else:
-            with open("consumer_keys.json", "w") as outfile:
+            with open(outKeyFile, "w") as outfile:
                 outfile.write(json.dumps(self.keys, indent=4, sort_keys=True))
 
     def connectToTwitter(self):
@@ -72,7 +74,9 @@ class KeyHolder:
             auth.set_access_token(self.keys["access_token"],
                                   self.keys["access_token_secret"])
 
-        else:
+        # Exclude this from Coverage because tests cannot try to authenticate
+        else: # pragma: no cover
+            redirect_url = "no url"
             try:
                 redirect_url = auth.get_authorization_url()
             except tweepy.TweepError:
@@ -88,7 +92,7 @@ class KeyHolder:
 
             self.keys["access_token"] = auth.access_token
             self.keys["access_token_secret"] = auth.access_token_secret
-            self.saveKeyToFile()
+            self.saveKeysToFile("keys_save.json")
 
         api = tweepy.API(auth)
         return api
