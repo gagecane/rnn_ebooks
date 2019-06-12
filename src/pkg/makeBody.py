@@ -75,7 +75,7 @@ class KeyHolder:
                                   self.keys["access_token_secret"])
 
         # Exclude this from Coverage because tests cannot try to authenticate
-        else: # pragma: no cover
+        else:  # pragma: no cover
             redirect_url = "no url"
             try:
                 redirect_url = auth.get_authorization_url()
