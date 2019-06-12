@@ -1,5 +1,6 @@
 import tweepy
 import json
+import sys
 # from datetime import datetime
 import emoji
 import os
@@ -106,34 +107,29 @@ class OfflineBody:
         self.outputHtm = outputHtm
         pass
 
-    def printJsonBody(self, filename):
+    def printJsonBody(self):
         """Generate test.htm from the corpus and open it in a browser
-
-        Arguments:
-            filename {string} -- The input json file to print
         """
-        with open(filename, 'r') as infile:
-            data = json.load(infile)
-            with open(self.outputHtm, 'w', encoding='utf-8-sig') as f:
-                for d in data.values():
-                    f.write((emoji.emojize(d)+"\n").replace("\r\n", "\n")
-                            .replace("\n", "<br />\n"))
+        data = self.getJsonBody()
+        with open(self.outputHtm, 'w', encoding='utf-8-sig') as f:
+            for d in data.values():
+                f.write((emoji.emojize(d)+"\n").replace("\r\n", "\n")
+                        .replace("\n", "<br />\n"))
+
+        if not hasattr(sys, "_called_from_test"):  # pragma: no cover
             os.startfile(self.outputHtm)
 
-    def getJsonBody(self, filename):
+    def getJsonBody(self):
         """Try loading body from Json file. Return the dict if the file exists
-
-        Arguments:
-            filename {string} -- Json body filename
 
         Returns:
             Dict -- Json data or None if file does not exist
         """
         try:
-            with open(filename, 'r') as infile:
+            with open(self.filename, 'r') as infile:
                 return json.load(infile)
         except Exception:
-            print(filename + "does not exist.")
+            print(self.filename + "does not exist.")
             return None
 
 
@@ -146,9 +142,9 @@ class OnlineBody(OfflineBody):
         self.user = user
         self.Timeline = Timeline
         self.outFilename = "./bodies/"+user.replace("@", '')+"_body.json"
-        OfflineBody.__init__(self.outFilename)
+        OfflineBody.__init__(self, self.outFilename)
 
-    def buildBody(self, user, Timeline):
+    def buildBody(self, user, Timeline):  # pragma: no cover
         """Build a body JSON for an input user
 
         Arguments:
@@ -192,7 +188,7 @@ class Timeline:
         self.tweetsToWrite = {}
 
     def printTweetsToFile(self, user, count, filename,
-                          existingBody, max_id=None):
+                          existingBody, max_id=None):  # pragma: no cover
         """ Print a number of tweets from a specified username to a file
 
         Arguments:
